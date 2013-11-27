@@ -4,8 +4,7 @@
  * Local Constants and Macros
  */
 
-#define IBUFSZ 32
-
+#define CHR_COMMENT '#'
 #define IS_BLANK(a) \
     ((a) == ' '     \
     || (a) == '\t'  \
