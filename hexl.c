@@ -4,7 +4,12 @@
  * Local Constants and Macros
  */
 
-#define CHR_COMMENT '#'
+#define IS_EOL_CHAR(a) \
+    ((a) == '\n' || (a) == '\r')
+
+#define IS_COMMENT_CHAR(a) \
+    ((a) == '#')
+
 #define IS_BLANK(a) \
     ((a) == ' '     \
     || (a) == '\t'  \
@@ -29,26 +34,39 @@
  */
 
 int hexl_encode(int cnt, const char *src, char *dst) {
-    return 0;
-}
 
-int hexl_decode(int cnt, const char *src, char *dst, int opt) {
+    char ch, buf[2];
+    int i, is_cmmt;
 
-    char ch, ibuf[IBUFSZ];
-    int i;
-
-    if (i < 1)
-        goto _failure;
+    if (cnt < 1)
+        goto _abort;
 
     for (i = 0; i < cnt; i++) {
         ch = *(src + i);
+        /* checks whether the current character
+           belongs to a comment... */
+        if (is_cmmt) {
+            if (IS_EOL_CHAR(ch))
+                is_cmmt = 0;
+            continue;
+        }
+        if (IS_COMMENT_CHAR(ch)) {
+            is_cmmt = 1;
+            continue;
+        }
         if (IS_BLANK(ch))
             continue;
     }
 
     return i;
 
-    _failure:
+_abort:
+    return -1;
+
+}
+
+int hexl_decode(int cnt, const char *src, char *dst) {
+
     return 0;
 
 }
