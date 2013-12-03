@@ -32,7 +32,7 @@
       ? (ch) - 'A' + 10             \
       : ((ch) >= 'a' && (ch) <= 'f' \
         ? (ch) - 'a' + 10           \
-        : 0)));
+        : 0)))
 
 #define GET_COMMENT_STATE(st) \
     ((st) & 1)
