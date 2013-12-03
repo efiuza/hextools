@@ -16,9 +16,9 @@
     ((ch) == ' '          \
     || (ch) == '\t'       \
     || (ch) == '\n'       \
+    || (ch) == '\r'       \
     || (ch) == '\v'       \
-    || (ch) == '\f'       \
-    || (ch) == '\r')
+    || (ch) == '\f')
 
 #define IS_HEXDIGT_CHAR(ch)          \
     (((ch) >= '0' && (ch) <= '9')    \
@@ -34,6 +34,12 @@
         ? (ch) - 'a' + 10           \
         : 0)));
 
+#define GET_COMMENT_STATE(st) \
+    ((st) & 1)
+
+#define SET_COMMENT_STATE(st, cmmt) \
+    ((st) = (st) | ((cmmt) & 1))
+
 /*
  * Private Routines
  */
@@ -44,13 +50,25 @@
  * Public Entry Points
  */
 
-int hexl_encode(int cnt, const char *src, char *dst) {
+int
+hexl_encode(
+    int cnt,
+    const char *src,
+    char *dst,
+    int *rd,
+    int *wrt,
+    int *st) {
 
-    char ch, buf;
-    int i, is_cmmt;
+    unsigned char ch, _ch;
+    int r, s, i, j, is_cmmt;
 
-    for (i = 0; i < cnt; i++) {
-        ch = *(src + i);
+    /* Initialize locals... */
+    r       = 1;
+    s       = *st;
+    is_cmmt = GET_COMMENT_STATE(s);
+
+    for (i = 0, j = 0; i < cnt; i++) {
+        ch = (unsigned char) *(src + i);
         /* Checks whether the current character
            belongs to a comment section... */
         if (is_cmmt) {
@@ -68,13 +86,31 @@ int hexl_encode(int cnt, const char *src, char *dst) {
         }
         if (IS_BLANK_CHAR(ch))
             continue;
-        if (IS_HEXDIGIT_CHAR(ch)) {
-            buf = HEX2BIN(ch) << 4;
+        if (IS_HEXDIGIT_CHAR(ch) && ++i < cnt) {
+            _ch = (unsigned char) *(src + i);
+            if (IS_HEXDIGIT_CHAR(_ch)) {
+                ch = (HEX2BIN(ch) << 4) | HEX2BIN(_ch);
+                *(dst + j++) = (char)ch;
+                continue;
+            }
         }
+        /* If execution reaches this section of code
+           the source buffer has invalid characters
+           and the function should be terminated
+           indicating an error on return. */
+        r = 0;
         break;
     }
 
-    return i;
+    /* Update state... */
+    SET_COMMENT_STATE(s, is_cmmt);
+
+    /* Update references... */
+    *rd  = i;
+    *wrt = j;
+    *st  = s;
+
+    return r;
 
 }
 
