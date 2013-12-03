@@ -51,20 +51,14 @@
  */
 
 int
-hexl_encode(
-    int cnt,
-    const char *src,
-    char *dst,
-    int *rd,
-    int *wrt,
-    int *st) {
+hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr, int *st) {
 
     unsigned char ch, _ch;
     int r, s, i, j, is_cmmt;
 
     /* Initialize locals... */
-    r       = 1;
-    s       = *st;
+    r = 1;
+    s = *st;
     is_cmmt = GET_COMMENT_STATE(s);
 
     for (i = 0, j = 0; i < cnt; i++) {
@@ -106,9 +100,9 @@ hexl_encode(
     SET_COMMENT_STATE(s, is_cmmt);
 
     /* Update references... */
-    *rd  = i;
-    *wrt = j;
-    *st  = s;
+    *rd = i;
+    *wr = j;
+    *st = s;
 
     return r;
 
