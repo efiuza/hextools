@@ -20,7 +20,7 @@
     || (ch) == '\v'       \
     || (ch) == '\f')
 
-#define IS_HEXDIGT_CHAR(ch)          \
+#define IS_HEXDIGIT_CHAR(ch)         \
     (((ch) >= '0' && (ch) <= '9')    \
     || ((ch) >= 'A' && (ch) <= 'F')  \
     || ((ch) >= 'a' && (ch) <= 'f'))
