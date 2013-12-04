@@ -22,6 +22,14 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    /* Open output file... */
+    ofp = fopen(ofn, "wb");
+    if (ofp == NULL) {
+        printf("Error openig output file: \"%s\"\n", ofn);
+        fclose(ifp);
+        return EXIT_FAILURE;
+    }
+
     return EXIT_SUCCESS;
 
 }
