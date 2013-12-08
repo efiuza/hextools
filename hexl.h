@@ -36,7 +36,12 @@ hexl_encode(
  *     representation of the source buffer contents. The destination
  *     buffer must be twice as big as the source buffer.
  */
-int hexl_decode(int count, const char *source, char *destination);
+int
+hexl_decode(
+    int count,
+    const char *source,
+    char *destination
+);
 
 #endif
 

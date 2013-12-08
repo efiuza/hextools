@@ -1,5 +1,3 @@
-#include "hexl.h"
-
 /*
  * Local Constants and Macros
  */
@@ -9,15 +7,15 @@
 #define HEXL_EINVAL  2
 #define HEXL_ENOBUFS 3
 
-#define COMMENT_CHAR '#'
+#define CHAR_COMMENT '#'
 
-#define IS_EOL_CHAR(ch) \
+#define IS_CHAR_EOL(ch) \
     ((ch) == '\n' || (ch) == '\r')
 
-#define IS_COMMENT_CHAR(ch) \
-    ((ch) == COMMENT_CHAR)
+#define IS_CHAR_COMMENT(ch) \
+    ((ch) == CHAR_COMMENT)
 
-#define IS_BLANK_CHAR(ch) \
+#define IS_CHAR_BLANK(ch) \
     ((ch) == ' '          \
     || (ch) == '\t'       \
     || (ch) == '\n'       \
@@ -25,12 +23,12 @@
     || (ch) == '\v'       \
     || (ch) == '\f')
 
-#define IS_HEXDIGIT_CHAR(ch)         \
+#define IS_CHAR_HEXDIGIT(ch)         \
     (((ch) >= '0' && (ch) <= '9')    \
     || ((ch) >= 'A' && (ch) <= 'F')  \
     || ((ch) >= 'a' && (ch) <= 'f'))
 
-#define HEX2BIN(ch)                 \
+#define EVAL_HEXDIGIT(ch)           \
     ((ch) >= '0' && (ch) <= '9'     \
     ? (ch) - '0'                    \
     : ((ch) >= 'A' && (ch) <= 'F'   \
@@ -40,75 +38,86 @@
         : 0)))
 
 /*
- * Private Routines
+ * State Control...
  */
 
+#define IS_STATE_INIT(sw) \
+    ((sw) == 0)
 
+#define IS_STATE_OCTET(sw) \
+    ((sw) == 1)
+
+#define IS_STATE_COMMENT(sw) \
+    ((sw) == 2)
+
+#define SET_STATE_INIT(sw) \
+    ((sw) = 0)
+
+#define SET_STATE_OCTET(sw) \
+    ((sw) |= 1)
+
+#define SET_STATE_COMMENT(sw) \
+    ((sw) |= 2)
+
+#define CLEAR_STATE_OCTET(sw) \
+    ((sw) &= -2)
+
+#define CLEAR_STATE_COMMENT(sw) \
+    ((sw) &= -3)
 
 /*
- * Public Entry Points
+ * Public Code Entry Points
  */
 
 int
 hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr) {
 
-    unsigned char ch, _ch;
-    int i, j, cmmt, is_cmmt, result;
+    unsigned char buf, octet;
+    int i, j, tmp, status, result;
 
     /* Initialize locals... */
     result = HEXL_OK;
-    is_cmmt = 0;
+    SET_STATE_INIT(status);
 
     for (i = 0, j = 0; i < cnt; i++) {
-        ch = (unsigned char) *(src + i);
-        /* Checks whether the current character
-           belongs to a comment section... */
-        if (is_cmmt) {
-            if (IS_EOL_CHAR(ch))
-                is_cmmt = 0;
+        buf = (unsigned char) *(src + i);
+        if (IS_STATE_COMMENT(status)) {
+            if (IS_CHAR_EOL(buf))
+                CLEAR_STATE_COMMENT(status);
             /* On windows, line endings are marked
                with two characteres (CR + LF). The
                second one can be ignored once it is
                also considered a blank character. */
             continue;
-        }
-        if (IS_COMMENT_CHAR(ch)) {
-            is_cmmt = 1;
-            cmmt = i;
+        } else if (IS_STATE_INIT(status) && IS_CHAR_COMMENT(buf)) {
+            SET_STATE_COMMENT(status);
+            tmp = i;
             continue;
-        }
-        if (IS_BLANK_CHAR(ch))
+        } else if (IS_STATE_INIT(status) && IS_CHAR_BLANK(buf)) {
             continue;
-        if (IS_HEXDIGIT_CHAR(ch)) {
-            if (++i < cnt) {
-                _ch = (unsigned char) *(src + i);
-                if (IS_HEXDIGIT_CHAR(_ch)) {
-                    ch = (HEX2BIN(ch) << 4) | HEX2BIN(_ch);
-                    *(dst + j++) = (char)ch;
-                    continue;
-                }
-                result = HEXL_EILSEQ;
-                break;
+        } else if ((IS_STATE_INIT(status) || IS_STATE_OCTET(status))
+            && IS_CHAR_HEXDIGIT(buf)) {
+            buf = EVAL_HEXDIGIT(buf);
+            if (IS_STATE_OCTET(status)) {
+                CLEAR_STATE_OCTET(status);
+                octet = (octet << 4) | buf;
+                *(dst + j++) = (char)octet;
+            } else {
+                SET_STATE_OCTET(status);
+                octet = buf;
             }
-            i--;
-            result = HEXL_ENOBUFS;
-            break;
+            continue;
         }
-        /* If execution reaches this section of code
-           the source buffer has invalid characters
-           and the function should be terminated
-           indicating the error on return. */
-        result = HEXL_EINVAL;
+        result = IS_STATE_OCTET(status)
+            ? HEXL_EILSEQ
+            : HEXL_EINVAL;
         break;
     }
 
-    /* Check if buffer ended inside a comment
-       section. In this case, the source pointer
-       must point back to the comment character
-       and return to the user an empty buffer
-       indicator. */ 
-    if (is_cmmt) {
-        i = cmmt;
+    if ((IS_STATE_OCTET(status) || IS_STATE_COMMENT(status)) && i >= cnt) {
+        i = IS_STATE_OCTET(status)
+            ? i - 1
+            : tmp;
         result = HEXL_ENOBUFS;
     }
 

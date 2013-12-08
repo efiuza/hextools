@@ -1,3 +1,4 @@
-# object files
+# compilation files
+*.i
 *.o
-
+*.obj
