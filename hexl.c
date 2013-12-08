@@ -4,6 +4,11 @@
  * Local Constants and Macros
  */
 
+#define HEXL_OK      0
+#define HEXL_EILSEQ  1
+#define HEXL_EINVAL  2
+#define HEXL_ENOBUFS 3
+
 #define COMMENT_CHAR '#'
 
 #define IS_EOL_CHAR(ch) \
@@ -34,12 +39,6 @@
         ? (ch) - 'a' + 10           \
         : 0)))
 
-#define GET_COMMENT_STATE(st) \
-    ((st) & 1)
-
-#define SET_COMMENT_STATE(st, cmmt) \
-    ((st) = (st) | ((cmmt) & 1))
-
 /*
  * Private Routines
  */
@@ -51,15 +50,14 @@
  */
 
 int
-hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr, int *st) {
+hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr) {
 
     unsigned char ch, _ch;
-    int r, s, i, j, is_cmmt;
+    int i, j, cmmt, is_cmmt, result;
 
     /* Initialize locals... */
-    r = 1;
-    s = *st;
-    is_cmmt = GET_COMMENT_STATE(s);
+    result = HEXL_OK;
+    is_cmmt = 0;
 
     for (i = 0, j = 0; i < cnt; i++) {
         ch = (unsigned char) *(src + i);
@@ -76,35 +74,49 @@ hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr, int *st) {
         }
         if (IS_COMMENT_CHAR(ch)) {
             is_cmmt = 1;
+            cmmt = i;
             continue;
         }
         if (IS_BLANK_CHAR(ch))
             continue;
-        if (IS_HEXDIGIT_CHAR(ch) && ++i < cnt) {
-            _ch = (unsigned char) *(src + i);
-            if (IS_HEXDIGIT_CHAR(_ch)) {
-                ch = (HEX2BIN(ch) << 4) | HEX2BIN(_ch);
-                *(dst + j++) = (char)ch;
-                continue;
+        if (IS_HEXDIGIT_CHAR(ch)) {
+            if (++i < cnt) {
+                _ch = (unsigned char) *(src + i);
+                if (IS_HEXDIGIT_CHAR(_ch)) {
+                    ch = (HEX2BIN(ch) << 4) | HEX2BIN(_ch);
+                    *(dst + j++) = (char)ch;
+                    continue;
+                }
+                result = HEXL_EILSEQ;
+                break;
             }
+            i--;
+            result = HEXL_ENOBUFS;
+            break;
         }
         /* If execution reaches this section of code
            the source buffer has invalid characters
            and the function should be terminated
-           indicating an error on return. */
-        r = 0;
+           indicating the error on return. */
+        result = HEXL_EINVAL;
         break;
     }
 
-    /* Update state... */
-    SET_COMMENT_STATE(s, is_cmmt);
+    /* Check if buffer ended inside a comment
+       section. In this case, the source pointer
+       must point back to the comment character
+       and return to the user an empty buffer
+       indicator. */ 
+    if (is_cmmt) {
+        i = cmmt;
+        result = HEXL_ENOBUFS;
+    }
 
     /* Update references... */
     *rd = i;
     *wr = j;
-    *st = s;
 
-    return r;
+    return result;
 
 }
 

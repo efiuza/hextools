@@ -5,17 +5,20 @@
  * Interface
  */
 
+#define HEXL_OK      0
+#define HEXL_EILSEQ  1
+#define HEXL_EINVAL  2
+#define HEXL_ENOBUFS 3
+
 /* @return
- *     Returns 1 on success, 0 on error.
+ *     Returns 0 on success, non-zero integer on error.
  * @description
  *     Fills the destination buffer with the binary representation of
  *     the source buffer ASCII encoded hexadecimal contents. The
  *     destination buffer must be at least half the size of the source
  *     buffer. The integer references passed as arguments are updated
  *     with the amount of bytes read from and written to the source and
- *     destination buffers respectively. The last one preserves the state
- *     of the encoding process and is useful for segmented encodings.
- *     On start its value should be 0.
+ *     destination buffers respectively.
  */
 int
 hexl_encode(
@@ -23,8 +26,7 @@ hexl_encode(
     const char *source,
     char *destination,
     int *read,
-    int *written,
-    int *state
+    int *written
 );
 
 /* @return
