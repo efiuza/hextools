@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "hexl.h"
-#include "hexlw.h"
+#include "hexu.h"
 
 /*
  * Local Definitions
@@ -9,14 +9,21 @@
 
 #define BUFFER_SIZE 50
 
+/*
+ * Implementation
+ */
+
 int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
 
     char ibuf[BUFFER_SIZE], obuf[BUFFER_SIZE];
-    int rd, wr, cnt, diff = 0;
+    int rd, wr, cnt, ret, diff = 0;
     int pos = 0, eno = HEXU_OK;
 
     FILE *ifp, *ofp;
     size_t frd, fwr, fcnt = BUFFER_SIZE;
+
+    /* Initialize stat structure... */
+    /* ... */
 
     /* Open input file... */
     ifp = fopen(ifn, "rb");
@@ -40,7 +47,12 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
         }
 
         cnt = diff + (int)frd;
-        switch (hexl_encode(cnt, ibuf, obuf, &rd, &wr)) {
+        ret = hexl_encode(cnt, ibuf, obuf, &rd, &wr);
+
+        /* Update file position... */
+        pos += rd;
+
+        switch (ret) {
             case HEXL_OK:
                 break;
             case HEXL_ENOBUFS:
@@ -50,17 +62,14 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
                 goto _exit_close_both;
             case HEXL_EILSEQ:
                 eno = HEXU_EILSEQ;
-                goto _exit_close_both;
+                goto _exit_update_stat;
             case HEXL_EINVAL:
                 eno = HEXU_EINVAL;
-                goto _exit_close_both;
+                goto _exit_update_stat;
             default:
                 eno = HEXU_EFAULT;
                 goto _exit_close_both;
         }
-
-        /* Update absolute read position... */
-        pos += rd;
 
         /* Update diff (difference between what
            has been supplied and what has actually
@@ -82,6 +91,9 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
             break;
 
     }
+
+_exit_update_stat:
+    /* ... */
 
 _exit_close_both:
     fclose(ofp);
