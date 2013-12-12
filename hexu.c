@@ -24,8 +24,9 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
     size_t frd, fwr, fcnt;
 
     /* Initialize statistics structure... */
+    st.nr_chars = 0;
+    st.nr_lines = 0;
     /* ... */
-    memset(&st, 0, sizeof(struct hexu_stat));
 
     /* Set initial result... */
     result = HEXU_OK;
@@ -66,6 +67,21 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
         ret = hexl_encode(cnt, ibuf, obuf, &rd, &wr);
 
         /* update statistics... */
+        if (rd > diff) {
+            lim = rd - diff;
+            for (i = 0; i < lim; i++) {
+                ch = *(ibufp + i);
+                if (ch != '\n' && ch != '\r')
+                    continue;
+                if (ch == '\r' && i + 1 < lim) {
+                    ch = *(ibufp + i + 1);
+                    if (ch == '\n')
+                        i++;
+                }
+                st.nr_lines++;
+            }
+            st.nr_chars = i;
+        }
         /* ... */
 
         /* check return status... */

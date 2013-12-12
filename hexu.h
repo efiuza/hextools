@@ -17,9 +17,8 @@
 #define HEXU_EFAULT  9
 
 struct hexu_stat {
-    int errno;
-    int errln;
-    int errch;
+    int nr_chars;
+    int nr_lines;
 };
 
 struct hexu_opt {
