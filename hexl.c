@@ -13,9 +13,9 @@
  */
 
 #define HEXL_OK      0
-#define HEXL_EILSEQ  1
-#define HEXL_EINVAL  2
-#define HEXL_ENOBUFS 3
+#define HEXL_ENOBUFS 1
+#define HEXL_EILSEQ  2
+#define HEXL_EINVAL  3
 
 #define CHAR_COMMENT '#'
 
