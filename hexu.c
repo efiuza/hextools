@@ -16,12 +16,11 @@
 int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
 
     char *ibufp, ibuf[BUFFER_SIZE], obuf[BUFFER_SIZE];
-    int rd, wr, cnt, ret, diff;
-    int pos = 0, result;
+    int rd, wr, cnt, diff, ret;
+    int i, j, result;
     struct hexu_stat st;
 
     FILE *ifp, *ofp;
-    size_t frd, fwr, fcnt;
 
     /* Initialize statistics structure... */
     st.nr_chars = 0;
@@ -68,16 +67,14 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
 
         /* update statistics... */
         if (rd > diff) {
-            lim = rd - diff;
-            for (i = 0; i < lim; i++) {
+            j = rd - diff;
+            for (i = 0; i < j; i++) {
                 ch = *(ibufp + i);
                 if (ch != '\n' && ch != '\r')
                     continue;
-                if (ch == '\r' && i + 1 < lim) {
-                    ch = *(ibufp + i + 1);
-                    if (ch == '\n')
-                        i++;
-                }
+                if (ch == '\r' && i + 1 < j
+                    && *(ibufp + i + 1) == '\n')
+                    i++; /* CR + LF = 1 LN... */
                 st.nr_lines++;
             }
             st.nr_chars = i;
@@ -85,7 +82,7 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
         /* ... */
 
         /* check return status... */
-        if (ret != HEXL_OK && (ret != HEXL_NOBUFS || rd < 0)) {
+        if (ret != HEXL_OK && (ret != HEXL_NOBUFS || rd < 1)) {
             result = ret == HEXL_EILSEQ ? HEXU_EILSEQ
               : (ret == HEXL_EINVAL ? HEXU_EINVAL
                 : (ret == HEXL_ENOBUFS ? HEXU_NOBUFS
@@ -113,14 +110,15 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
 
     }
 
-_exit_update_stat:
-    /* ... */
-
 _exit_close_both:
     fclose(ofp);
 
 _exit_close_input:
     fclose(ifp);
+
+    /* update stat reference... */
+    stat->nr_chars = st.nr_chars;
+    stat->nr_lines = st.nr_lines;
 
 _exit:
     return result;
