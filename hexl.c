@@ -64,16 +64,10 @@
     ((sw) = 0)
 
 #define SET_STATE_CHAR(sw) \
-    ((sw) |= 1)
+    ((sw) = 1)
 
 #define SET_STATE_COMMENT(sw) \
-    ((sw) |= 2)
-
-#define CLEAR_STATE_CHAR(sw) \
-    ((sw) &= ~1)
-
-#define CLEAR_STATE_COMMENT(sw) \
-    ((sw) &= ~2)
+    ((sw) = 2)
 
 /*
  * Public Code Entry Points
@@ -97,7 +91,7 @@ hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr) {
                second one can be ignored once it is
                also considered a blank character. */
             if (IS_CHAR_EOL(ch))
-                CLEAR_STATE_COMMENT(status);
+                SET_STATE_INIT(status);
             continue;
         } else if (IS_STATE_INIT(status) && IS_CHAR_COMMENT(ch)) {
             SET_STATE_COMMENT(status);
@@ -109,7 +103,7 @@ hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr) {
             && IS_CHAR_HEXDIGIT(ch)) {
             ch = EVAL_HEXDIGIT(ch);
             if (IS_STATE_CHAR(status)) {
-                CLEAR_STATE_CHAR(status);
+                SET_STATE_INIT(status);
                 _ch = (_ch << 4) | ch;
                 *(dst + j++) = (char)_ch;
             } else {
