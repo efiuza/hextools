@@ -1,3 +1,13 @@
+/**
+ * @author Emanuel F. Oliveira
+ * @email efiuza@me.com
+ * @date Sat, 14 Dec 2013
+ * @version 1.0
+ */
+
+#include <limits.h>
+#if CHAR_BIT == 8
+
 /*
  * Local Constants and Macros
  */
@@ -44,7 +54,7 @@
 #define IS_STATE_INIT(sw) \
     ((sw) == 0)
 
-#define IS_STATE_OCTET(sw) \
+#define IS_STATE_CHAR(sw) \
     ((sw) == 1)
 
 #define IS_STATE_COMMENT(sw) \
@@ -53,17 +63,17 @@
 #define SET_STATE_INIT(sw) \
     ((sw) = 0)
 
-#define SET_STATE_OCTET(sw) \
+#define SET_STATE_CHAR(sw) \
     ((sw) |= 1)
 
 #define SET_STATE_COMMENT(sw) \
     ((sw) |= 2)
 
-#define CLEAR_STATE_OCTET(sw) \
-    ((sw) &= -2)
+#define CLEAR_STATE_CHAR(sw) \
+    ((sw) &= ~1)
 
 #define CLEAR_STATE_COMMENT(sw) \
-    ((sw) &= -3)
+    ((sw) &= ~2)
 
 /*
  * Public Code Entry Points
@@ -72,7 +82,7 @@
 int
 hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr) {
 
-    unsigned char buf, octet;
+    unsigned char ch, _ch;
     int i, j, tmp, status, result;
 
     /* Initialize locals... */
@@ -80,42 +90,42 @@ hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr) {
     SET_STATE_INIT(status);
 
     for (i = 0, j = 0; i < cnt; i++) {
-        buf = (unsigned char) *(src + i);
+        ch = (unsigned char) *(src + i);
         if (IS_STATE_COMMENT(status)) {
-            if (IS_CHAR_EOL(buf))
-                CLEAR_STATE_COMMENT(status);
             /* On windows, line endings are marked
                with two characteres (CR + LF). The
                second one can be ignored once it is
                also considered a blank character. */
+            if (IS_CHAR_EOL(ch))
+                CLEAR_STATE_COMMENT(status);
             continue;
-        } else if (IS_STATE_INIT(status) && IS_CHAR_COMMENT(buf)) {
+        } else if (IS_STATE_INIT(status) && IS_CHAR_COMMENT(ch)) {
             SET_STATE_COMMENT(status);
             tmp = i;
             continue;
-        } else if (IS_STATE_INIT(status) && IS_CHAR_BLANK(buf)) {
+        } else if (IS_STATE_INIT(status) && IS_CHAR_BLANK(ch)) {
             continue;
-        } else if ((IS_STATE_INIT(status) || IS_STATE_OCTET(status))
-            && IS_CHAR_HEXDIGIT(buf)) {
-            buf = EVAL_HEXDIGIT(buf);
-            if (IS_STATE_OCTET(status)) {
-                CLEAR_STATE_OCTET(status);
-                octet = (octet << 4) | buf;
-                *(dst + j++) = (char)octet;
+        } else if ((IS_STATE_INIT(status) || IS_STATE_CHAR(status))
+            && IS_CHAR_HEXDIGIT(ch)) {
+            ch = EVAL_HEXDIGIT(ch);
+            if (IS_STATE_CHAR(status)) {
+                CLEAR_STATE_CHAR(status);
+                _ch = (_ch << 4) | ch;
+                *(dst + j++) = (char)_ch;
             } else {
-                SET_STATE_OCTET(status);
-                octet = buf;
+                SET_STATE_CHAR(status);
+                _ch = ch;
             }
             continue;
         }
-        result = IS_STATE_OCTET(status)
+        result = IS_STATE_CHAR(status)
             ? HEXL_EILSEQ
             : HEXL_EINVAL;
         break;
     }
 
-    if ((IS_STATE_OCTET(status) || IS_STATE_COMMENT(status)) && i >= cnt) {
-        i = IS_STATE_OCTET(status)
+    if ((IS_STATE_CHAR(status) || IS_STATE_COMMENT(status)) && i >= cnt) {
+        i = IS_STATE_CHAR(status)
             ? i - 1
             : tmp;
         result = HEXL_ENOBUFS;
@@ -134,4 +144,6 @@ int hexl_decode(int cnt, const char *src, char *dst) {
     return 0;
 
 }
+
+#endif
 
