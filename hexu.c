@@ -130,7 +130,10 @@ _exit_close_input:
     fclose(ifp);
 
     /* update stat reference... */
-    *stat = st;
+    stat->nr_chars = chs;
+    stat->nr_lines = lns;
+    stat->ln_init  = ln;
+    stat->ln_cur   = chs - ln;
 
 _exit:
     return result;

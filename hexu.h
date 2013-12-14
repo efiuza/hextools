@@ -6,9 +6,9 @@
  */
 
 #define HEXU_OK      0
-#define HEXU_EILSEQ  1
-#define HEXU_EINVAL  2
-#define HEXU_ENOBUFS 3
+#define HEXU_ENOBUFS 1
+#define HEXU_EILSEQ  2
+#define HEXU_EINVAL  3
 #define HEXU_EBADFR  4
 #define HEXU_EBADFW  5
 #define HEXU_EIOR    6
