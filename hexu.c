@@ -7,7 +7,8 @@
  * Local Definitions
  */
 
-#define BUFFER_SIZE 32
+#define INPUT_BUFFER 64
+#define OUTPUT_BUFFER (INPUT_BUFFER / 2)
 
 /*
  * Implementation
@@ -15,19 +16,15 @@
 
 int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
 
-    char *ibufp, ibuf[BUFFER_SIZE], obuf[BUFFER_SIZE];
-    int rd, wr, cnt, diff, ret;
-    int i, j, result;
-    struct hexu_stat st;
+    char ibuf[INPUT_BUFFER], obuf[OUTPUT_BUFFER], *ibp;
+    int rd, wr, cnt, rem, ret, result;
+
+    int i, ln, lns, chs;
+    char pch, ch;
 
     FILE *ifp, *ofp;
 
-    /* Initialize statistics structure... */
-    st.nr_chars = 0;
-    st.nr_lines = 0;
-    /* ... */
-
-    /* Set initial result... */
+    /* Initialize result... */
     result = HEXU_OK;
 
     /* Open input file... */
@@ -44,42 +41,55 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
         goto _exit_close_input;
     }
 
-    /* ibufp starts pointing to the begining
-       of the input buffer... */
-    ibufp = ibuf;
-    cnt = BUFFER_SIZE;
-    diff = 0;
+    /* Initial parameters... */
+    ibp = ibuf;
+    cnt = INPUT_BUFFER;
+    rem = 0;
+    chs = 0;
+    lns = 0;
+    ln  = 0;
+    ch  = 0;
 
-    while ((rd = (int)fread(ibufp, 1, cnt, ifp)) > 0) {
+    while ((rd = (int)fread(ibp, 1, cnt, ifp)) > 0) {
 
         if (rd != cnt) {
-            if (ferror(ifp)) {
+            if (rd > cnt || ferror(ifp)) {
                 result = HEXU_EIOR;
                 goto _exit_close_both;
             }
             cnt = rd;
         }
 
-        if (diff > 0)
-            cnt += diff;
+        if (rem > 0) {
+            cnt += rem;
+            /* data consistency check... */
+            if (cnt > INPUT_BUFFER) {
+                result = HEXU_EFAULT;
+                goto _exit_close_both;
+            }
+        }
 
         ret = hexl_encode(cnt, ibuf, obuf, &rd, &wr);
 
-        /* update statistics... */
-        if (rd > diff) {
-            j = rd - diff;
-            for (i = 0; i < j; i++) {
-                ch = *(ibufp + i);
+        /* data consistency check... */
+        if (rd < 0 || rd > cnt) {
+            result = HEXU_EFAULT;
+            goto _exit_close_both;
+        }
+
+        /* update statistics before checking status... */
+        if (rd > 0) {
+            for (i = 0; i < rd; i++) {
+                pch = ch;
+                ch = *(ibuf + i);
                 if (ch != '\n' && ch != '\r')
                     continue;
-                if (ch == '\r' && i + 1 < j
-                    && *(ibufp + i + 1) == '\n')
-                    i++; /* CR + LF = 1 LN... */
-                st.nr_lines++;
+                if (ch != '\n' || pch != '\r')
+                    lns++;
+                ln = chs + i + 1;
             }
-            st.nr_chars = i;
+            chs += i;
         }
-        /* ... */
 
         /* check return status... */
         if (ret != HEXL_OK && (ret != HEXL_NOBUFS || rd < 1)) {
@@ -90,13 +100,16 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
             goto _exit_close_both;
         }
 
-        /* Update diff (difference between what
-           has been supplied and what has actually
-           been read) and move remaining content
-           to the begining of buffer... */
-        diff = cnt - rd;
-        if (rd > 0 && diff > 0)
-            memmove(ibuf, ibuf + rd, diff);
+        /* update rem (remainder from the last encode
+           operation) and move remaining content
+           to the begining of input buffer... */
+        rem = cnt - rd;
+        if (rd > 0 && rem > 0)
+            memmove(ibuf, ibuf + rd, rem);
+
+        /* update fread parameters... */
+        ibp = ibuf + rem;
+        cnt = INPUT_BUFFER - rem;
 
         if (wr > 0) {
             if (fwrite(obuf, 1, wr, ofp) != wr) {
@@ -117,8 +130,7 @@ _exit_close_input:
     fclose(ifp);
 
     /* update stat reference... */
-    stat->nr_chars = st.nr_chars;
-    stat->nr_lines = st.nr_lines;
+    *stat = st;
 
 _exit:
     return result;

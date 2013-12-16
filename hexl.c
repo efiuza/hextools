@@ -124,7 +124,7 @@ hexl_encode(int cnt, const char *src, char *dst, int *rd, int *wr) {
         break;
     }
 
-    if ((IS_STATE_CHAR(status) || IS_STATE_COMMENT(status)) && i >= cnt) {
+    if (i == cnt && (IS_STATE_CHAR(status) || IS_STATE_COMMENT(status))) {
         i = IS_STATE_CHAR(status)
             ? i - 1
             : tmp;

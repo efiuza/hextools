@@ -19,6 +19,8 @@
 struct hexu_stat {
     int nr_chars;
     int nr_lines;
+    int ln_init;
+    int ln_cur;
 };
 
 struct hexu_opt {
