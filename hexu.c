@@ -20,7 +20,7 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
     int rd, wr, cnt, rem, ret, result;
 
     int i, ln, lns, chs;
-    char pch, ch;
+    char _ch, ch;
 
     FILE *ifp, *ofp;
 
@@ -80,11 +80,11 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
         /* update statistics before checking status... */
         if (rd > 0) {
             for (i = 0; i < rd; i++) {
-                pch = ch;
+                _ch = ch;
                 ch = *(ibuf + i);
                 if (ch != '\n' && ch != '\r')
                     continue;
-                if (ch != '\n' || pch != '\r')
+                if (ch != '\n' || _ch != '\r')
                     lns++;
                 ln = chs + i + 1;
             }
@@ -92,10 +92,10 @@ int hexu_encode(const char *ifn, const char *ofn, struct hexu_stat *stat) {
         }
 
         /* check return status... */
-        if (ret != HEXL_OK && (ret != HEXL_NOBUFS || rd < 1)) {
-            result = ret == HEXL_EILSEQ ? HEXU_EILSEQ
-              : (ret == HEXL_EINVAL ? HEXU_EINVAL
-                : (ret == HEXL_ENOBUFS ? HEXU_NOBUFS
+        if (ret != HEXL_OK && (ret != HEXL_ENOBUFS || rd < 1)) {
+            result = ret == HEXL_ENOBUFS ? HEXU_ENOBUFS
+              : (ret == HEXL_EILSEQ ? HEXU_EILSEQ
+                : (ret == HEXL_EINVAL ? HEXU_EINVAL
                   : HEXU_EFAULT));
             goto _exit_close_both;
         }
