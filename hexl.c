@@ -6,7 +6,9 @@
  */
 
 #include <limits.h>
-#if CHAR_BIT == 8
+#if CHAR_BIT != 8
+#error "This program only works on 8-bit char platforms..."
+#endif
 
 /*
  * Local Constants and Macros
@@ -138,6 +140,4 @@ int hexl_decode(int cnt, const char *src, char *dst) {
     return 0;
 
 }
-
-#endif
 
