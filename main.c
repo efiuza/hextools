@@ -10,6 +10,15 @@
 #define MODE_ENCODE 0
 #define MODE_DECODE 1
 
+/* Messages */
+
+#define MSG_STATS                      \
+    "Stats:\n"                         \
+    " # bytes processed......: %d\n"   \
+    " # lines processed......: %d\n"   \
+    " # last line offset.....: %d\n"   \
+    " # last line byte offset: %d\n\n"
+
 /* Error Messages */
 
 #define EMSG_BAD_USAGE \
@@ -54,9 +63,31 @@ int main(int argc, char *argv[]) {
     }
 
     if (mode == MODE_ENCODE) {
-        res = hexu_encode(argv[1], argv[2], &st);
+        /* perform encoding... */
+        res = hexu_encode(
+            argv[1],
+            argv[2],
+            &st
+        );
+        /* print stats... */
+        fprintf(
+            stdout,
+            MSG_STATS,
+            st.nr_chars,
+            st.nr_lines,
+            st.ln_init,
+            st.ln_cur
+        );
+        /* check return value... */
         if (res != HEXU_OK) {
-            fprintf(stderr, EMSG_UNKNOWN, res);
+            switch (res) {
+                case HEXU_ENOBUFS:
+                    fputs(EMSG_BUFFER_NARROW, stderr);
+                    break;
+                default:
+                    fprintf(stderr, EMSG_UNKNOWN, res);
+                    break;
+            }
             goto _exit_failure;
         }
     }
