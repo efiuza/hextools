@@ -7,7 +7,7 @@
  * Local Definitions
  */
 
-#define INPUT_BUFFER 64
+#define INPUT_BUFFER 8192
 #define OUTPUT_BUFFER (INPUT_BUFFER / 2)
 
 /*
